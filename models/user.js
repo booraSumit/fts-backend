@@ -23,7 +23,11 @@ const userSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "Department",
   },
-  isAdmin: true,
+  created_by: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Admin",
+    required: true,
+  },
   created_at: {
     type: Date,
     default: Date.now,
@@ -34,10 +38,7 @@ const userSchema = new mongoose.Schema({
 });
 
 userSchema.methods.generateAuthToken = function () {
-  const token = jwt.sign(
-    { _id: this._id, isAdmin: this.isAdmin },
-    config.get("jwtPrivateKey")
-  );
+  const token = jwt.sign({ _id: this._id }, config.get("jwtPrivateKey"));
   return token;
 };
 
@@ -45,13 +46,20 @@ const User = mongoose.model("User", userSchema);
 
 const userValidate = (user) => {
   const schema = Joi.object({
-    name: Joi.string().min(3).max(50).required(),
-    email: Joi.string().email({
-      minDomainSegments: 2,
-      tlds: { allow: ["com", "net"] },
-    }),
-    password: Joi.string().min(8).max(50).required(),
-    department_id: Joi.string().hex().length(24).required(),
+    isAdmin: Joi.boolean().required(),
+    user_id: Joi.string().hex().length(24).required(),
+
+    new_user: Joi.object({
+      name: Joi.string().min(3).max(50).required(),
+      email: Joi.string().email({
+        minDomainSegments: 2,
+        tlds: { allow: ["com", "net"] },
+      }),
+      password: Joi.string().min(8).max(50).required(),
+      department_id: Joi.string().hex().length(24).required(),
+    })
+      .options({ presence: "required" })
+      .required(),
   });
 
   return schema.validate(user);
